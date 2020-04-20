@@ -92,15 +92,17 @@ void Foam::sixDoFRigidBodyMotionRestraints::LumpedMassMethodMooring::restrain
     vector& restraintMoment
 ) const
 {
-    restraintPosition = motion.transform(refAttachmentPt_);
-    restraintMoment = vector::zero;
+    restraintPosition = motion.transform(refAttachmentPt_);//获取当前时间步下浮体锚固点坐标
+    restraintMoment = vector::zero;  //初始化力与力矩
     restraintForce = vector::zero;
     scalar direct1=(restraintPosition[0]==anchor_[0]?0:(restraintPosition[0]-anchor_[0]>0?-1:1));
     scalar direct2=(restraintPosition[1]==anchor_[1]?0:(restraintPosition[1]-anchor_[1]>0?-1:1));
-    scalar x = mag(anchor_[0] - restraintPosition[0]);
+    //上面这两个direct指的是力的方向即确定正负 *没有z是因为悬链z方向力肯定是负的*
+
+    scalar x = mag(anchor_[0] - restraintPosition[0]); //进入悬链线平面进行二维计算
     scalar h = mag(anchor_[1] - restraintPosition[1]);
-    scalar a1=999999;
-    scalar a2=0.0001;
+    scalar a1=999999; //以下是求当前高度下**恰好anchor无垂直力**的悬链线长度 l_p
+    scalar a2=0.0001; //迭代求解，悬链线方程 y=a(coshx/a -1)
     scalar toleranceA=0.001;
     while (Foam::mag(((a1+a2)/2)*(Foam::cosh(x/((a1+a2)/2))-1)-h) > toleranceA)
     {
@@ -115,11 +117,11 @@ void Foam::sixDoFRigidBodyMotionRestraints::LumpedMassMethodMooring::restrain
         }
     }
     scalar a=(a1+a2)/2;
-    scalar maxCatenarycableLength = a * Foam::sinh (x/a);
-    vector r = restraintPosition - anchor_;
+    scalar maxCatenarycableLength = a * Foam::sinh (x/a); //得到 l_p
+    vector r = restraintPosition - anchor_; //两个锚固点连线，定义为矢量
     scalar strightLineLength = mag(r);
 
-    if (cableLength_ >= maxCatenarycableLength)
+    if (cableLength_ >= maxCatenarycableLength) //缆绳长度大于 l_p时，部分拖地
     {
         mooringstate=1;//The first state of the mooring chain, which is mentioned in section 4.1
         mooringstate1loopingZ:
@@ -199,12 +201,12 @@ void Foam::sixDoFRigidBodyMotionRestraints::LumpedMassMethodMooring::restrain
 
 void Foam::sixDoFRigidBodyMotionRestraints::LumpedMassMethodMooring::calculatingZX()const
 {
-    scalar l = catenaryCableLength / n_;
-    scalar verticalForce = (catenaryTotalMass/n_/2 * g_)*(1-supportForcePercent) ;
+    scalar l = catenaryCableLength / n_;  //每小段长度
+    scalar verticalForce = (catenaryTotalMass/n_/2 * g_)*(1-supportForcePercent) ;//节点垂直力
     //the horizontalforce in the first piece which also in every piece
     scalar horizontalForce = verticalForce/Foam::tan(firstPieceSeita);
     scalar seita = firstPieceSeita;
-    scalar totalForce = verticalForce/Foam::sin(seita);
+    scalar totalForce = verticalForce/Foam::sin(seita); //该段总力
     scalar finalZ=0;
     scalar finalX=cableLength_ - catenaryCableLength;
 
@@ -214,7 +216,7 @@ void Foam::sixDoFRigidBodyMotionRestraints::LumpedMassMethodMooring::calculating
     for (int i=1;i<=n_ - 1; i++)
     {
         //calculate the vertical force in each piece
-        verticalForce = verticalForce + catenaryTotalMass * g_ / n_ ;
+        verticalForce = verticalForce + catenaryTotalMass * g_ / n_ ; //垂直力一段一段的加起来
         //calculate the angle between each cable piece and horizontal
         seita = Foam::atan(verticalForce/horizontalForce) ;
         //calculate total force in each piece
