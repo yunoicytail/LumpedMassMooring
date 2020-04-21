@@ -130,7 +130,7 @@ void Foam::sixDoFRigidBodyMotionRestraints::LumpedMassMethodMooring::restrain
             while (calculatedZ < h)
             {
                 addSeita();
-                calculatingZX();
+                calculatingZX();//
             }
             while (calculatedX > x)
             {
