@@ -127,10 +127,10 @@ void Foam::sixDoFRigidBodyMotionRestraints::LumpedMassMethodMooring::restrain
         mooringstate1loopingZ:
 
             calculatingZX();
-            while (calculatedZ < h)
+            while (calculatedZ < h) //增加seita继续迭代h
             {
                 addSeita();
-                calculatingZX();//
+                calculatingZX();
             }
             while (calculatedX > x)
             {
@@ -227,8 +227,8 @@ void Foam::sixDoFRigidBodyMotionRestraints::LumpedMassMethodMooring::calculating
     calculatedZ=finalZ;
     calculatedX=finalX;
     Ttotal=totalForce;
-    Tv=verticalForce;
-    Th=horizontalForce;
+    Tv=verticalForce; //垂直力
+    Th=horizontalForce; //水平力
 }
 
 void Foam::sixDoFRigidBodyMotionRestraints::LumpedMassMethodMooring::addSeita()const
