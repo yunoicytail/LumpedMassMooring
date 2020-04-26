@@ -203,7 +203,7 @@ void Foam::sixDoFRigidBodyMotionRestraints::LumpedMassMethodMooring::calculating
 {
     scalar l = catenaryCableLength / n_;  //每小段长度
     scalar verticalForce = (catenaryTotalMass/n_/2 * g_)*(1-supportForcePercent) ;//节点垂直力
-    //the horizontalforce in the first piece which also in every piece
+    //the horizontalForce in the first piece which also in every piece
     scalar horizontalForce = verticalForce/Foam::tan(firstPieceSeita);
     scalar seita = firstPieceSeita;
     scalar totalForce = verticalForce/Foam::sin(seita); //该段总力
