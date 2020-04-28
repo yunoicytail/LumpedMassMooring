@@ -71,7 +71,6 @@ Foam::sixDoFRigidBodyMotionRestraints::LumpedMassMethodMooring3D::LumpedMassMeth
     catenaryCableLength = cableLength_;
     catenaryTotalMass = totalMass_ ;
     gMag_ = Foam::mag(g_);
-    g_ /= Foam::mag(g_);
     supportForcePercent= 0;
     firstPieceSeita = 0.0001;
     Ttotal = 0;
@@ -100,30 +99,31 @@ void Foam::sixDoFRigidBodyMotionRestraints::LumpedMassMethodMooring3D::restrain
     restraintPosition = motion.transform(refAttachmentPt_);//获取当前时间步下浮体锚固点坐标
     restraintMoment = vector::zero;  //初始化力与力矩
     restraintForce = vector::zero;
-    point pos0 = restraintPosition;
-    point pos1 = anchor_;
+    //point pos0 = restraintPosition;
+    //point pos1 = anchor_;
     // Set the local coordinate system
-    scalar y0 = (pos0 & g_);
-    scalar y1 = (pos1 & g_ );
+    //scalar y0 = (pos0 & g_);
+    //scalar y1 = (pos1 & g_ );
 
-    scalar x0 = 0.0;
+    //scalar x0 = 0.0;
 
     //系泊点与锚固点直线长度
-    vector r = restraintPosition - anchor_; 
-    scalar strightLineLength = mag(r);
-    scalar x1 = Foam::mag(r - (r & g_)*g_);
-    scalar span_ = x1;//悬链线纵向长度
-    scalar h = y1 - y0; //悬链线垂向高度
-    vector horzVec = r - (r & g_)*g_;
+    vector r = anchor_ - restraintPosition;
+    scalar strightLineLength = Foam::mag(r);
+    vector gVec_ = g_ /Foam::mag(g_);
+    scalar x1 = Foam::mag(r - (r & gVec_)*gVec_);
+    scalar x = x1;//悬链线纵向长度
+    scalar h = r & gVec_; //悬链线垂向高度
+    vector horzVec = r - (r & gVec_)*gVec_;
     horzVec /= Foam::mag(horzVec);
     //求解系泊锚固点之间的标准悬链线长度 - l_p 
     //迭代求解，悬链线方程 y=a(coshx/a -1)
     scalar a1=999999; 
     scalar a2=0.0001; 
-    scalar toleranceA=0.001;
-    while (Foam::mag(((a1+a2)/2)*(Foam::cosh(span_/((a1+a2)/2))-1)-h) > toleranceA)
+    scalar toleranceA=0.0001;
+    while (Foam::mag(((a1+a2)/2)*(Foam::cosh(x/((a1+a2)/2))-1)-h) > toleranceA)
     {
-        scalar y3 = ((a1+a2)/2) *(Foam::cosh ( span_/((a1+a2)/2)) -1);
+        scalar y3 = ((a1+a2)/2) *(Foam::cosh ( x/((a1+a2)/2)) -1);
         if(y3<h)
         {
             a1= (a1+a2)/2;
@@ -134,7 +134,7 @@ void Foam::sixDoFRigidBodyMotionRestraints::LumpedMassMethodMooring3D::restrain
         }
     }
     scalar a=(a1+a2)/2;
-    scalar maxCatenarycableLength = a * Foam::sinh (span_/a);
+    scalar maxCatenarycableLength = a * Foam::sinh (x/a);
 
     // * * * * * * * * * * * 三种情况计算缆绳力 * * * * * * * * * * * * * * * * * //
 
@@ -149,15 +149,15 @@ void Foam::sixDoFRigidBodyMotionRestraints::LumpedMassMethodMooring3D::restrain
                 addSeita();
                 calculatingZX();
             }
-            while (calculatedX > span_)
+            while (calculatedX > x)
             {
                 calculatingFromNextPiece();
                 goto mooringstate1loopingZ;
             }
 
         //restraintForce = Th * horzVec; //水平力
-        //restraintForce = Tv * g_; //垂向力
-        restraintForce = Tv * g_ + Th * horzVec;
+        //restraintForce = Tv * gVec_; //垂向力
+        restraintForce = Tv * gVec_ + Th * horzVec;
     }
 
     else if (maxCatenarycableLength > cableLength_ && cableLength_ >= strightLineLength)
@@ -171,15 +171,15 @@ void Foam::sixDoFRigidBodyMotionRestraints::LumpedMassMethodMooring3D::restrain
                 addSeita();
                 calculatingZX();
             }
-            while (calculatedX < span_)
+            while (calculatedX < x)
             {
                 changeSupportForcePercent();
                 goto mooringstate2loopingZ;
             }
 
         //restraintForce = Th * horzVec; //水平力
-        //restraintForce = Tv * g_; //垂向力
-        restraintForce = Tv * g_ + Th * horzVec;
+        //restraintForce = Tv * gVec_; //垂向力
+        restraintForce = Tv * gVec_ + Th * horzVec;
     }
 
     else if(strightLineLength > cableLength_)
@@ -188,7 +188,7 @@ void Foam::sixDoFRigidBodyMotionRestraints::LumpedMassMethodMooring3D::restrain
         r/= (strightLineLength + VSMALL);
         scalar elongation = strightLineLength - cableLength_;
         scalar stiffness = EA_ / cableLength_;
-        restraintForce = -stiffness * elongation * r;
+        restraintForce = stiffness * elongation * r;
     }
     
     // Data output
