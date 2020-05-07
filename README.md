@@ -1,6 +1,8 @@
 # LumpedMassMethodMooring
 Use the lump mass method to calculate cable forces
 
+## 由于5/1发现的问题，本项目已弃用
+
 使用集中质量法求解悬链线的缆绳力
 
 算法很简单，主要思路：
